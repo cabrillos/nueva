@@ -284,48 +284,69 @@
         if ("undefined" != typeof window && "serviceWorker" in navigator && "undefined" != typeof caches) {
           caches.has("start-url").then(function (e) {
               e || caches.open("start-url").then((e) => e.put("/", new Response("", { status: 200 })));
-          }),
-          (window.workbox = new c("https://cabrillos.github.io/nueva/sw.js", { scope: "/nueva/" })),
+          });
+      
+          window.workbox = new c("/nueva/sw.js", { scope: "/nueva/" });
+      
           window.workbox.addEventListener("installed", async ({ isUpdate: e }) => {
               if (!e) {
-                  let e = await caches.open("start-url"),
-                      t = await fetch("/"),
-                      r = t;
-                  t.redirected && (r = new Response(t.body, { status: 200, statusText: "OK", headers: t.headers })), await e.put("/", r);
+                  let cache = await caches.open("start-url"),
+                      response = await fetch("/");
+                  let responseToCache = response;
+                  if (response.redirected) {
+                      responseToCache = new Response(response.body, {
+                          status: 200,
+                          statusText: "OK",
+                          headers: response.headers,
+                      });
+                  }
+                  await cache.put("/", responseToCache);
               }
-          }),
+          });
+      
           window.workbox.addEventListener("installed", async () => {
-              let e = window.performance
+              let resources = window.performance
                   .getEntriesByType("resource")
                   .map((e) => e.name)
-                  .filter((e) => e.startsWith(`${window.location.origin}/_next/data/`) && e.endsWith(".json")),
-                  t = await caches.open("next-data");
-              e.forEach((e) => t.add(e));
+                  .filter((e) => e.startsWith(`${window.location.origin}/_next/data/`) && e.endsWith(".json"));
+      
+              let nextDataCache = await caches.open("next-data");
+              resources.forEach((resource) => nextDataCache.add(resource));
           });
-          let e = function (e) {
-              if (window.navigator.onLine && "/" === e)
-                  return fetch("/").then(function (e) {
-                      return e.redirected ? Promise.resolve() : caches.open("start-url").then((t) => t.put("/", e));
+      
+          let handleOnline = function (path) {
+              if (window.navigator.onLine && "/" === path) {
+                  return fetch("/").then(function (response) {
+                      if (response.redirected) {
+                          return Promise.resolve();
+                      } else {
+                          return caches.open("start-url").then((cache) => cache.put("/", response));
+                      }
                   });
+              }
           };
-          let t = history.pushState;
+      
+          let pushState = history.pushState;
           history.pushState = function () {
-              t.apply(history, arguments), e(arguments[2]);
+              pushState.apply(history, arguments);
+              handleOnline(arguments[2]);
           };
-          let r = history.replaceState;
+      
+          let replaceState = history.replaceState;
           history.replaceState = function () {
-              r.apply(history, arguments), e(arguments[2]);
+              replaceState.apply(history, arguments);
+              handleOnline(arguments[2]);
           };
+      
           window.addEventListener("online", () => {
-              e(window.location.pathname);
+              handleOnline(window.location.pathname);
+          });
+      
+          window.addEventListener("online", () => {
+              location.reload();
           });
       }
-      window.addEventListener("online", () => {
-          location.reload();
-      });
       
-          });
-        }
       },
       37: function () {
         "trimStart" in String.prototype || (String.prototype.trimStart = String.prototype.trimLeft),
