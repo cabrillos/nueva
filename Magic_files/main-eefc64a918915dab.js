@@ -285,7 +285,7 @@
         caches.has("start-url").then(function (e) {
           e || caches.open("start-url").then((e) => e.put("/", new Response("", { status: 200 })));
         }),
-          (window.workbox = new c(window.location.origin + "/sw.js", { scope: "/" })),
+          (window.workbox = new c(window.location.origin +"/nueva"+"/sw.js", { scope: "/" })),
           window.workbox.addEventListener("installed", async ({ isUpdate: e }) => {
             if (!e) {
               let e = await caches.open("start-url"),
